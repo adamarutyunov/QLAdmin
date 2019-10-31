@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>0</x>
-     <y>20</y>
+     <y>40</y>
      <width>821</width>
      <height>101</height>
     </rect>
@@ -28,7 +28,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Добро пожаловать в SQLAdmin</string>
+    <string>Добро пожаловать в QLAdmin</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
@@ -38,9 +38,9 @@
    <property name="geometry">
     <rect>
      <x>270</x>
-     <y>360</y>
+     <y>460</y>
      <width>281</width>
-     <height>51</height>
+     <height>50</height>
     </rect>
    </property>
    <property name="text">
@@ -51,9 +51,9 @@
    <property name="geometry">
     <rect>
      <x>270</x>
-     <y>420</y>
+     <y>520</y>
      <width>281</width>
-     <height>51</height>
+     <height>50</height>
     </rect>
    </property>
    <property name="text">
