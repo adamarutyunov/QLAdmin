@@ -1,8 +1,9 @@
 import sys
 import sqlite3
-from PyQt5.QtWidgets import QApplication, QWidget, QTableWidgetItem, QMainWindow
-from PyQt5.QtGui import QWindow
+from PyQt5.QtWidgets import QApplication, QWidget, QTableWidgetItem, QMainWindow, QListWidgetItem
+from PyQt5.QtGui import QWindow, QColor
 from PyQt5 import uic, QtGui, QtWidgets, Qt, QtCore
+from PyQt5.Qt import QDialog
 
 class PyQL:
     def __init__(self, connection):
@@ -31,7 +32,6 @@ class PyQL:
             condition = ""
     
         execution = f"UPDATE {table} SET {key}={value} {condition} {options}"
-        print(execution)
         self.executions.append(execution)
         self.cursor.execute(execution)
 
@@ -47,7 +47,6 @@ class PyQL:
             columns = ", ".join(columns)
 
         execution = f"SELECT {columns} FROM {table} {condition} {options}"
-        self.executions.append(execution)
         self.cursor.execute(execution)
 
         return self.cursor.fetchall()
@@ -71,6 +70,12 @@ class PyQL:
 
     def import_commits(self, commits):
         self.executions += commits
+
+    def get_commit_list(self):
+        return self.executions
+
+    def clear_commits(self):
+        self.executions = []
 
 
 class QLTableViewWindow(QMainWindow):
@@ -117,13 +122,23 @@ class QLTableViewWindow(QMainWindow):
     def export_local_commits(self):
         PQLE.import_commits(self.local_commits)
         self.local_commits = []
+        self.close()
 
     def change_cell(self, i, j):
         first_column = self.column_names[0]
         target_column = self.column_names[j]
         value = self.python_table[i][0]
-        PQLE.update(self.table_name, target_column, self.table.item(i, j).text(), [f"{first_column}={value}"])
-
+        try:
+            PQLE.update(self.table_name, target_column, self.table.item(i, j).text(), [f"{first_column}={value}"])
+        except:
+            self.table.item(i, j).setBackground(QColor(255, 0, 0))
+            self.table.clearSelection()
+            return
+        if self.table.item(i, j).text():
+            self.table.item(i, j).setBackground(QColor(255, 220, 0))
+        else:
+            self.table.item(i, j).setBackground(QColor(200, 200, 200))
+        self.table.clearSelection()
 
     def closeEvent(self, event):
         self.close()
@@ -135,36 +150,51 @@ class QLDatabaseViewWindow(QMainWindow):
         super().__init__()
         uic.loadUi("DatabaseViewWindow.ui", self)
         
-        self.init_tables_table()
-        self.commit_button.clicked.connect(self.commit_database)
+        self.init_tables_list()
+        self.commit_button.clicked.connect(self.ask_for_commits)
+        self.edit_button.clicked.connect(lambda: self.edit_table(self.tables_list.item(self.tables_list.currentRow(), 0).text()))
+        self.delete_button.clicked.connect(lambda: self.delete_table(self.tables_list.item(self.tables_list.currentRow(), 0).text()))
+        self.tables_list.itemSelectionChanged.connect(self.check_button_state)
+
+        self.check_button_state()
 
         self.show()
 
-    def init_tables_table(self):
-
-        self.tables_list = PQLE.execute("""SELECT name FROM sqlite_master
-                                        WHERE type = 'table' AND name NOT LIKE 'sqlite_%'""")
+    def init_tables_list(self):
+        self.tables = PQLE.select("sqlite_master", "name", ["type = 'table'", "name NOT LIKE 'sqlite_%'"])
         
-        self.tables_table.setColumnCount(2)
-        self.tables_table.setRowCount(0)
+        self.tables_list.setColumnCount(1)
+        self.tables_list.setRowCount(0)
 
-        self.header = self.tables_table.horizontalHeader()
-
+        self.header = self.tables_list.horizontalHeader()
         self.header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
         
-        for i, row in enumerate(self.tables_list):
-            self.tables_table.setRowCount(self.tables_table.rowCount() + 1)
+        for i, row in enumerate(self.tables):
+            self.tables_list.setRowCount(self.tables_list.rowCount() + 1)
             
             item_table = QTableWidgetItem(row[0])
-            item_table.setFlags(item_table.flags() ^ QtCore.Qt.ItemIsEditable ^ QtCore.Qt.ItemIsSelectable)
-            self.tables_table.setItem(i, 0, item_table)
+            item_table.setFlags(item_table.flags() ^ QtCore.Qt.ItemIsEditable)
+            self.tables_list.setItem(i, 0, item_table)
 
-            empty_item = QTableWidgetItem()
-            empty_item.setFlags(empty_item.flags() ^ QtCore.Qt.ItemIsEditable ^ QtCore.Qt.ItemIsSelectable)
-            self.tables_table.setItem(i, 1, empty_item)
+    def edit_table(self, table):
+        QLA.open_window(QLTableViewWindow, table)
 
-    def commit_database(self):
-        PQLE.commit()
+    def delete_table(self, table):
+        PQLE.delete_table(table)
+
+    def check_button_state(self):
+        if len(self.tables_list.selectedItems()) == 0:
+            self.edit_button.setEnabled(False)
+            self.delete_button.setEnabled(False)
+        else:
+            self.edit_button.setEnabled(True)
+            self.delete_button.setEnabled(True)
+
+    def ask_for_commits(self):
+        try:
+            QLA.open_window(QLCommitDialog)
+        except Exception as e:
+            print(e)
 
 
 class QLAdmin:
@@ -175,6 +205,36 @@ class QLAdmin:
         window.hide()
         self.windows.remove(window)
 
+    def open_window(self, window, *options):
+        self.windows.append(window(*options))
+
+
+class QLCommitDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        uic.loadUi("CommitDialog.ui", self)
+        self.fill_commits()
+
+        self.commit_button.clicked.connect(self.commit)
+        self.cancel_button.clicked.connect(self.cancel)
+        self.discard_button.clicked.connect(self.discard)
+
+        self.show()
+
+    def fill_commits(self):
+        for commit in PQLE.get_commit_list():
+            self.commit_list.addItem(QListWidgetItem(commit))
+
+    def commit(self):
+        PQLE.commit()
+        QLA.close_window(self)
+
+    def cancel(self):
+        QLA.close_window(self)
+
+    def discard(self):
+        PQLE.clear_commits()
+        QLA.close_window(self)
 
 
 connection = sqlite3.connect("films.db")
