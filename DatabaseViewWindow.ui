@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>430</width>
+    <width>719</width>
     <height>750</height>
    </rect>
   </property>
@@ -18,21 +18,21 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>31</width>
-     <height>31</height>
+     <width>101</width>
+     <height>41</height>
     </rect>
    </property>
    <property name="text">
-    <string>C</string>
+    <string>Commit</string>
    </property>
   </widget>
   <widget class="QPushButton" name="edit_button">
    <property name="geometry">
     <rect>
-     <x>50</x>
+     <x>210</x>
      <y>10</y>
-     <width>91</width>
-     <height>31</height>
+     <width>101</width>
+     <height>41</height>
     </rect>
    </property>
    <property name="text">
@@ -42,10 +42,10 @@
   <widget class="QPushButton" name="delete_button">
    <property name="geometry">
     <rect>
-     <x>150</x>
+     <x>310</x>
      <y>10</y>
      <width>101</width>
-     <height>31</height>
+     <height>41</height>
     </rect>
    </property>
    <property name="text">
@@ -57,9 +57,48 @@
     <rect>
      <x>10</x>
      <y>50</y>
-     <width>411</width>
+     <width>701</width>
      <height>691</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="sql_button">
+   <property name="geometry">
+    <rect>
+     <x>110</x>
+     <y>10</y>
+     <width>101</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>SQL</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="reindex_button">
+   <property name="geometry">
+    <rect>
+     <x>510</x>
+     <y>10</y>
+     <width>101</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Reindex</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="truncate_button">
+   <property name="geometry">
+    <rect>
+     <x>410</x>
+     <y>10</y>
+     <width>101</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Truncate</string>
    </property>
   </widget>
  </widget>

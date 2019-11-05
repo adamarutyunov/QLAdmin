@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>261</width>
-    <height>78</height>
+    <width>333</width>
+    <height>138</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,34 +18,44 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>151</width>
+     <width>311</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Are you sure want to action?</string>
+    <string/>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton">
+  <widget class="QLineEdit" name="input">
    <property name="geometry">
     <rect>
-     <x>180</x>
-     <y>50</y>
-     <width>75</width>
-     <height>23</height>
+     <x>10</x>
+     <y>40</y>
+     <width>311</width>
+     <height>21</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="ok_button">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>100</y>
+     <width>113</width>
+     <height>32</height>
     </rect>
    </property>
    <property name="text">
     <string>OK</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_2">
+  <widget class="QPushButton" name="cancel_button">
    <property name="geometry">
     <rect>
      <x>100</x>
-     <y>50</y>
-     <width>75</width>
-     <height>23</height>
+     <y>100</y>
+     <width>113</width>
+     <height>32</height>
     </rect>
    </property>
    <property name="text">
