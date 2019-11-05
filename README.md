@@ -1,4 +1,4 @@
 # QLAdmin
 Yandex.Lyceum Qt Project.
 
-Version 0.1.
+Version 0.5.
