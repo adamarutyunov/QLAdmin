@@ -17,7 +17,8 @@ class QLWindow:
 
 
 class PyQL:
-    def __init__(self, connection):
+    def __init__(self, connection, dbname):
+        self.dbname = dbname.split("/")[-1].split(".")[0]
         self.connection = connection
         self.cursor = self.connection.cursor()
         self.executions = []
@@ -60,9 +61,7 @@ class PyQL:
         return self.execute(execution)
 
     def reindex_table(self, table):
-        print(123)
         execution = f"REINDEX {table}"
-        self.executions.append(execution)
         return self.execute(execution)
 
     def commit(self):
@@ -70,12 +69,10 @@ class PyQL:
 
     def delete_table(self, table):
         execution = f"DROP TABLE {table}"
-        self.executions.append(execution)
         return self.execute(execution)
 
     def truncate_table(self, table):
         execution = f"TRUNCATE TABLE {table}"
-        self.executions.append(execution)
         return self.execute(execution)
 
     def execute(self, execution):
@@ -95,21 +92,38 @@ class PyQL:
         if not self.executions or execution != self.executions[-1]:
             self.executions.append(execution)
 
-    def add_column(self, table, column_name, data_type, default_value):
+    def add_column(self, table, column_name, data_type, default_value=""):
         execution = f"""ALTER TABLE {table}
                         ADD COLUMN {column_name}
-                        {data_type} DEFAULT {default_value}"""
-        self.executions.append(execution)
+                        {data_type} {'DEFAULT ' + default_value if default_value else ''}"""
         self.execute(execution)
 
     def rename_table(self, table, new_name):
         execution = f"ALTER TABLE {table} RENAME TO {new_name}"
-        self.executions.append(execution)
         self.execute(execution)
 
     def rename_column(self, table, column, new_name):
         execution = f"ALTER TABLE {table} RENAME COLUMN {column} TO {new_name}"
-        self.executions.append(execution)
+        self.execute(execution)
+
+    def create_table(self, table_name, columns):
+        def prepare_field(field):
+            out = ""
+            out += str(field[0]) + " "
+            out += str(field[1]) + " "
+            if field[2]:
+                out += "DEFAULT " + field[2] + " "
+            if field[3]:
+                out += "PRIMARY KEY "
+            if field[4]:
+                out += "UNIQUE "
+            return out
+
+        execution = f"CREATE TABLE {table_name} ({', '.join(map(prepare_field, columns))})"
+        self.execute(execution)
+
+    def vacuum(self):
+        execution = f"VACUUM {self.dbname}"
         self.execute(execution)
 
 
@@ -189,7 +203,9 @@ class QLDatabaseViewWindow(QMainWindow, QLWindow):
         self.truncate_button.clicked.connect(lambda: self.truncate_table(self.get_current_item_text()))
         self.reindex_button.clicked.connect(lambda: self.reindex_table(self.get_current_item_text()))
         self.rename_button.clicked.connect(lambda: self.rename_table(self.get_current_item_text()))
+
         self.fields_button.clicked.connect(self.view_table_fields)
+        self.newtable_button.clicked.connect(self.create_table)
         self.sql_button.clicked.connect(self.sql_query)
         
         self.tables_list.itemSelectionChanged.connect(self.check_button_state)
@@ -225,6 +241,7 @@ class QLDatabaseViewWindow(QMainWindow, QLWindow):
 
     def delete_table(self, table):
         PQLE.delete_table(table)
+        self.init_tables_list()
 
     def check_button_state(self):
         if len(self.tables_list.selectedItems()) == 0:
@@ -267,10 +284,14 @@ class QLDatabaseViewWindow(QMainWindow, QLWindow):
         QLA.open_window(QLFieldViewWindow, table)
 
     def rename_table(self, table):
-        QLA.open_window(QLInputDialog, "New name:", lambda new: self.rename(table, new))
+        QLA.open_window(QLInputDialog, "New name:", lambda new: self.rename(table, new), self.init_tables_list())
 
     def rename(self, table, new_name):
         PQLE.rename_table(table, new_name)
+        self.init_tables_list()
+
+    def create_table(self):
+        QLA.open_window(QLTableCreateWindow, self.init_tables_list)
 
 class QLAdmin:
     def __init__(self):
@@ -327,7 +348,7 @@ class QLLoginWindow(QMainWindow, QLWindow):
         global PQLE
 
         connection = sqlite3.connect(dbname)
-        PQLE = PyQL(connection)
+        PQLE = PyQL(connection, dbname)
 
         QLA.open_window(QLDatabaseViewWindow, dbname)
         self.close()
@@ -420,12 +441,12 @@ class QLFieldViewWindow(QMainWindow, QLWindow):
         self.rename_column_button.clicked.connect(self.rename_column)
 
         self.table.itemSelectionChanged.connect(self.check_button_state)
+        self.check_button_state()
 
         self.init_table()
         self.show()
 
     def init_table(self):
-        self.table.clearContents()
         self.table.setColumnCount(2)
         self.table.setRowCount(0)
         self.table.setHorizontalHeaderLabels(["Field name", "Field type"])
@@ -479,6 +500,113 @@ class QLFieldRenameWindow(QDialog, QLWindow):
     def rename(self):
         new_name = self.new_input.text()
         PQLE.rename_column(self.table_name, self.column_name, new_name)
+        self.close()
+
+
+class QLCreateFieldWindow(QMainWindow, QLWindow):
+    def __init__(self, func):
+        super().__init__()
+        uic.loadUi("CreateFieldWindow.ui", self)
+
+        self.setWindowTitle("Field creation")
+        self.cancel_button.clicked.connect(self.close)
+        self.ok_button.clicked.connect(self.prepare_field)
+        self.fieldtype.activated[str].connect(self.change_type)
+        self.ftype = "INT"
+
+        self.primary_key.stateChanged.connect(self.change_primary_key_status)
+        self.unique.stateChanged.connect(self.change_unique_status)
+
+        self.function = func
+
+        self.primary_key_status = False
+        self.unique_status = False
+
+        self.init_types()
+
+        self.show()
+
+    def prepare_field(self):
+        out = (self.fieldname.text(), self.ftype, self.defaultvalue.text(),
+               self.primary_key_status, self.unique_status)
+
+        self.function(out)
+        self.close()
+
+    def init_types(self):
+        for dtype in data_types:
+            self.fieldtype.addItem(dtype)
+
+    def change_type(self, ftype):
+        self.ftype = ftype
+
+    def change_primary_key_status(self, status):
+        if status == 2:
+            self.primary_key_status = True
+        else:
+            self.primary_key_status = False
+
+    def change_unique_status(self, status):
+        if status == 2:
+            self.unique_status = True
+        else:
+            self.unique_status = False
+
+
+class QLTableCreateWindow(QMainWindow, QLWindow):
+    def __init__(self, func):
+        super().__init__()
+        uic.loadUi("TableCreateWindow.ui", self)
+
+        self.cancel_button.clicked.connect(self.close)
+        self.ok_button.clicked.connect(self.create)
+        self.createf_button.clicked.connect(self.create_field)
+        self.deletef_button.clicked.connect(self.delete_field)
+        self.table.itemSelectionChanged.connect(self.check_button_state)
+        self.function = func
+
+        self.check_button_state()
+
+        self.fields = []
+        self.update_table()
+
+        self.show()
+
+    def create_field(self):
+        QLA.open_window(QLCreateFieldWindow, self.add_field)
+
+    def add_field(self, field):
+        self.fields.append(field)
+        self.update_table()
+
+    def update_table(self):
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(["Field name", "Field type", "Default value", "Primary key", "Unique"])
+        self.table.setRowCount(0)
+
+        self.header = self.table.horizontalHeader()
+
+        for i in range(len(self.header)):
+            self.header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
+        
+        for i, row in enumerate(self.fields):
+            self.table.setRowCount(self.table.rowCount() + 1)
+            for j, elem in enumerate(row):
+                self.table.setItem(i, j, QTableWidgetItem(str(elem)))
+
+    def check_button_state(self):
+        if len(self.table.selectedItems()) == 0:
+            self.deletef_button.setEnabled(False)
+        else:
+            self.deletef_button.setEnabled(True)
+
+    def delete_field(self):
+        self.fields.pop(self.table.currentRow())
+        self.update_table()
+
+    def create(self):
+        PQLE.create_table(self.table_name.text(), self.fields)
+        self.function()
         self.close()
         
 

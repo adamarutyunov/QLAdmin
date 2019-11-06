@@ -18,7 +18,7 @@
     <rect>
      <x>20</x>
      <y>10</y>
-     <width>101</width>
+     <width>81</width>
      <height>41</height>
     </rect>
    </property>
@@ -29,9 +29,9 @@
   <widget class="QPushButton" name="edit_button">
    <property name="geometry">
     <rect>
-     <x>240</x>
+     <x>340</x>
      <y>10</y>
-     <width>100</width>
+     <width>80</width>
      <height>41</height>
     </rect>
    </property>
@@ -42,9 +42,9 @@
   <widget class="QPushButton" name="delete_button">
    <property name="geometry">
     <rect>
-     <x>350</x>
+     <x>420</x>
      <y>10</y>
-     <width>100</width>
+     <width>80</width>
      <height>41</height>
     </rect>
    </property>
@@ -65,9 +65,9 @@
   <widget class="QPushButton" name="sql_button">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>100</x>
      <y>10</y>
-     <width>100</width>
+     <width>80</width>
      <height>41</height>
     </rect>
    </property>
@@ -78,9 +78,9 @@
   <widget class="QPushButton" name="reindex_button">
    <property name="geometry">
     <rect>
-     <x>680</x>
+     <x>660</x>
      <y>10</y>
-     <width>100</width>
+     <width>80</width>
      <height>41</height>
     </rect>
    </property>
@@ -91,9 +91,9 @@
   <widget class="QPushButton" name="truncate_button">
    <property name="geometry">
     <rect>
-     <x>570</x>
+     <x>580</x>
      <y>10</y>
-     <width>100</width>
+     <width>80</width>
      <height>41</height>
     </rect>
    </property>
@@ -104,9 +104,9 @@
   <widget class="QPushButton" name="fields_button">
    <property name="geometry">
     <rect>
-     <x>790</x>
+     <x>740</x>
      <y>10</y>
-     <width>100</width>
+     <width>80</width>
      <height>41</height>
     </rect>
    </property>
@@ -117,14 +117,40 @@
   <widget class="QPushButton" name="rename_button">
    <property name="geometry">
     <rect>
-     <x>460</x>
+     <x>500</x>
      <y>10</y>
-     <width>100</width>
+     <width>80</width>
      <height>41</height>
     </rect>
    </property>
    <property name="text">
     <string>Rename</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="vacuum_button">
+   <property name="geometry">
+    <rect>
+     <x>180</x>
+     <y>10</y>
+     <width>80</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Vacuum</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="newtable_button">
+   <property name="geometry">
+    <rect>
+     <x>260</x>
+     <y>10</y>
+     <width>80</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>New</string>
    </property>
   </widget>
  </widget>
