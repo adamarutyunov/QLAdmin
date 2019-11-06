@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>807</width>
-    <height>451</height>
+    <height>468</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,7 +27,7 @@
      <string>Fields of table &quot;TableName&quot;:</string>
     </property>
    </widget>
-   <widget class="QTableWidget" name="columns_table">
+   <widget class="QTableWidget" name="table">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -37,37 +37,24 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="delete_column_button">
+   <widget class="QPushButton" name="rename_column_button">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>400</y>
+      <x>510</x>
+      <y>410</y>
       <width>141</width>
       <height>51</height>
      </rect>
     </property>
     <property name="text">
-     <string>Delete column</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="alter_column_button">
-    <property name="geometry">
-     <rect>
-      <x>150</x>
-      <y>400</y>
-      <width>141</width>
-      <height>51</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Alter column</string>
+     <string>Rename column</string>
     </property>
    </widget>
    <widget class="QPushButton" name="add_column_button">
     <property name="geometry">
      <rect>
       <x>660</x>
-      <y>400</y>
+      <y>410</y>
       <width>141</width>
       <height>51</height>
      </rect>
