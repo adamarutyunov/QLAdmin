@@ -29,7 +29,7 @@ class PyQL:
         else:
             option = ""
 
-        values = "(" + ", ".join(map(lambda x: f"'{str(x)}'", values)) + ")"
+        values = "(" + ", ".join(map(str, values)) + ")"
 
         execution = f"INSERT INTO {table}{option} VALUES {values} {options}"
         self.append(execution)
@@ -80,7 +80,8 @@ class PyQL:
         return self.cursor.fetchall()
 
     def import_commits(self, commits):
-        self.executions += commits
+        for c in commits:
+            self.append(c)
 
     def get_commit_list(self):
         return self.executions
@@ -126,6 +127,16 @@ class PyQL:
         execution = f"VACUUM {self.dbname}"
         self.execute(execution)
 
+    def delete(self, table, row=[], options=""):
+        if row:
+            condition = "WHERE " + " AND ".join(row)
+        else:
+            condition = ""
+
+        execution = f"DELETE FROM {table} {condition} {options}"
+        self.append(execution)
+        self.execute(execution)
+
 
 class QLTableViewWindow(QMainWindow, QLWindow):
     def __init__(self, table_name):
@@ -139,13 +150,18 @@ class QLTableViewWindow(QMainWindow, QLWindow):
         self.local_commits = []
 
         self.ok_button.clicked.connect(self.export_local_commits)
-        self.table.cellChanged.connect(lambda i, j: self.change_cell(i, j))
+        self.insert_button.clicked.connect(self.insert_row)
+        self.delete_button.clicked.connect(self.delete_row)
 
-    def table_init(self, query=""):
-        if not query:
-            table = PQLE.select(self.table_name)
-        else:
-            table = PQLE.select(query)
+    def lam(self, i, j):
+        self.change_cell(i, j)
+
+    def table_init(self):
+        try:
+            self.table.cellChanged.disconnect(self.lam)
+        except:
+            pass
+        table = PQLE.select(self.table_name)
     
         self.python_table = table
         self.column_names = PQLE.execute(f"PRAGMA table_info({self.table_name})")
@@ -163,10 +179,14 @@ class QLTableViewWindow(QMainWindow, QLWindow):
         for i, row in enumerate(table):
             self.table.setRowCount(self.table.rowCount() + 1)
             for j, elem in enumerate(row):
-                self.table.setItem(i, j, QTableWidgetItem(str(elem)))
+                if type(self.python_table[i][j]) is str:
+                    self.table.setItem(i, j, QTableWidgetItem("'" + elem + "'"))
+                elif self.python_table[i][j] is None:
+                    self.table.setItem(i, j, QTableWidgetItem("NULL"))
+                else:
+                    self.table.setItem(i, j, QTableWidgetItem(str(elem)))
 
-    def close(self):
-        QLA.close_window(self)
+        self.table.cellChanged.connect(self.lam)
 
     def export_local_commits(self):
         PQLE.import_commits(self.local_commits)
@@ -176,11 +196,10 @@ class QLTableViewWindow(QMainWindow, QLWindow):
     def change_cell(self, i, j):
         first_column = self.column_names[0]
         target_column = self.column_names[j]
-        value = self.python_table[i][0]
+        value = self.table.item(i, 0).text()
         try:
             PQLE.update(self.table_name, target_column, self.table.item(i, j).text(), [f"{first_column}={value}"])
-        except Exception as e:
-            raise e
+        except:
             self.table.item(i, j).setBackground(QColor(255, 0, 0))
             self.table.clearSelection()
             return
@@ -189,6 +208,18 @@ class QLTableViewWindow(QMainWindow, QLWindow):
         else:
             self.table.item(i, j).setBackground(QColor(200, 200, 200))
         self.table.clearSelection()
+
+    def insert_row(self):
+        QLA.open_window(QLRowInsertWindow, self.table_name)
+
+    def delete(self, row):
+        first_column = self.column_names[0]
+        value = self.table.item(row, 0).text()
+        PQLE.delete(self.table_name, [f"{first_column}={value}"])
+        self.table_init()
+
+    def delete_row(self):
+        QLA.open_window(QLDialog, "delete this row", lambda: self.delete(self.table.currentRow()))
 
 
 class QLDatabaseViewWindow(QMainWindow, QLWindow):
@@ -209,6 +240,7 @@ class QLDatabaseViewWindow(QMainWindow, QLWindow):
         self.sql_button.clicked.connect(self.sql_query)
         
         self.tables_list.itemSelectionChanged.connect(self.check_button_state)
+        self.tables_list.itemDoubleClicked.connect(lambda: self.edit_table(self.get_current_item_text()))
 
         self.check_button_state()
 
@@ -277,14 +309,14 @@ class QLDatabaseViewWindow(QMainWindow, QLWindow):
         QLA.open_window(QLDialog, f"reindex table {table}", lambda: PQLE.reindex_table(table))
 
     def sql_query(self):
-        QLA.open_window(QLInputDialog, "Query:", PQLE.execute)
+        QLA.open_window(QLInputDialog, "Query:", self.execute_sql)
 
     def view_table_fields(self):
         table = self.get_current_item_text()
         QLA.open_window(QLFieldViewWindow, table)
 
     def rename_table(self, table):
-        QLA.open_window(QLInputDialog, "New name:", lambda new: self.rename(table, new), self.init_tables_list())
+        QLA.open_window(QLInputDialog, "New name:", lambda new: (self.rename(table, new), self.init_tables_list()))
 
     def rename(self, table, new_name):
         PQLE.rename_table(table, new_name)
@@ -292,6 +324,18 @@ class QLDatabaseViewWindow(QMainWindow, QLWindow):
 
     def create_table(self):
         QLA.open_window(QLTableCreateWindow, self.init_tables_list)
+
+    def execute_sql(self, query):
+        while ", " in query:
+            query = query.replace(", ", ",")
+        q = query.split()
+        if q[0] == "SELECT":
+            columns = q[1].split(",")
+        else:
+            columns = []
+        results = PQLE.execute(query)
+        if results:
+            QLA.open_window(QLResultsViewWindow, results, columns)
 
 class QLAdmin:
     def __init__(self):
@@ -608,7 +652,88 @@ class QLTableCreateWindow(QMainWindow, QLWindow):
         PQLE.create_table(self.table_name.text(), self.fields)
         self.function()
         self.close()
+
+class QLRowInsertWindow(QMainWindow, QLWindow):
+    def __init__(self, table_name):
+        super().__init__()
+        uic.loadUi("RowInsertWindow.ui", self)
+
+        self.setWindowTitle("Row insert")
+        self.table_name = table_name
+
+        self.cancel_button.clicked.connect(self.close)
+        self.ok_button.clicked.connect(self.insert)
+
+        self.init_table()
+        self.show()
+
+    def init_table(self):
+        self.table.setColumnCount(3)
+        self.table.setRowCount(0)
+        self.table.setHorizontalHeaderLabels(["Field name", "Field type", "Value"])
+
+        self.column_names = PQLE.execute(f"PRAGMA table_info({self.table_name})")
+
+        self.header = self.table.horizontalHeader()
+
+        for i in range(len(self.header)):
+            self.header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
         
+        for i, row in enumerate(self.column_names):
+            self.table.setRowCount(self.table.rowCount() + 1)
+            
+            item_table = QTableWidgetItem(self.column_names[i][1])
+            item_table.setFlags(item_table.flags() ^ QtCore.Qt.ItemIsEditable)
+            self.table.setItem(i, 0, item_table)
+
+            item_table = QTableWidgetItem(self.column_names[i][2])
+            item_table.setFlags(item_table.flags() ^ QtCore.Qt.ItemIsEditable)
+            self.table.setItem(i, 1, item_table)
+
+    def insert(self):
+        values = []
+        for i in range(self.table.rowCount()):
+            values.append(self.table.item(i, 2).text())
+
+        PQLE.insert(self.table_name, values)
+        self.close()
+
+class QLResultsViewWindow(QMainWindow, QLWindow):
+    def __init__(self, res, cnames=[]):
+        super().__init__()
+        uic.loadUi("SQLResultsViewWindow.ui", self)
+
+        self.setWindowTitle("Query results")
+
+        self.results = res
+        if cnames:
+            self.column_names = cnames
+        else:
+            self.column_names = range(1, len(self.results[0]) + 1)
+
+        self.init_table()
+        self.show()
+
+    def init_table(self):
+        self.table.setColumnCount(len(self.column_names))
+        self.table.setHorizontalHeaderLabels(self.column_names)
+        self.table.setRowCount(0)
+
+        self.header = self.table.horizontalHeader()
+
+        for i in range(len(self.header)):
+            self.header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
+        
+        for i, row in enumerate(self.results):
+            self.table.setRowCount(self.table.rowCount() + 1)
+            for j, elem in enumerate(row):
+                if type(self.results[i][j]) is str:
+                    self.table.setItem(i, j, QTableWidgetItem("'" + elem + "'"))
+                elif self.results[i][j] is None:
+                    self.table.setItem(i, j, QTableWidgetItem("NULL"))
+                else:
+                    self.table.setItem(i, j, QTableWidgetItem(str(elem)))
+
 
 data_types = ['INT', 'INTEGER', 'TINYINT', 'SMALLINT', 'MEDIUMINT',
               'BIGINT', 'UNSIGNED BIG INT', 'INT2', 'INT8', 'CHARACTER(20)',
@@ -616,7 +741,6 @@ data_types = ['INT', 'INTEGER', 'TINYINT', 'SMALLINT', 'MEDIUMINT',
               'NATIVE CHARACTER(70)', 'NVARCHAR(100)', 'TEXT', 'CLOB',
               'BLOB', 'REAL', 'DOUBLE', 'DOUBLE PRECISION', 'FLOAT',
               'NUMERIC', 'DECIMAL(10,5)', 'BOOLEAN', 'DATE', 'DATETIME']
-
 
 
 def excepthook(type, value, tback):
