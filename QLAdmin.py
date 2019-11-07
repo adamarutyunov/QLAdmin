@@ -1,8 +1,8 @@
 import sys
 import sqlite3
-from PyQt5.QtWidgets import QApplication, QWidget, QTableWidgetItem, QMainWindow
+from PyQt5.QtWidgets import QApplication, QWidget, QTableWidget, QTableWidgetItem, QMainWindow
 from PyQt5.QtWidgets import QListWidgetItem, QFileDialog, QInputDialog
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QFontDatabase, QFont, QPixmap
 from PyQt5 import uic, QtGui, QtWidgets, Qt, QtCore
 from PyQt5.Qt import QDialog
 
@@ -105,6 +105,7 @@ class PyQL:
 
     def rename_column(self, table, column, new_name):
         execution = f"ALTER TABLE {table} RENAME COLUMN {column} TO {new_name}"
+        print(execution)
         self.execute(execution)
 
     def create_table(self, table_name, columns):
@@ -137,14 +138,18 @@ class PyQL:
         self.append(execution)
         self.execute(execution)
 
+    def get_dbname(self):
+        return self.dbname
+
 
 class QLTableViewWindow(QMainWindow, QLWindow):
     def __init__(self, table_name):
         super().__init__()
-        uic.loadUi("TableViewWindow.ui", self)
+        uic.loadUi("ui/TableViewWindow.ui", self)
         self.table_name = table_name
         self.setWindowTitle(self.table_name)
         self.table_init()
+        self.table.setAttribute(QtCore.Qt.WA_MacShowFocusRect, False)
         self.show()
 
         self.local_commits = []
@@ -203,7 +208,7 @@ class QLTableViewWindow(QMainWindow, QLWindow):
             self.table.item(i, j).setBackground(QColor(255, 0, 0))
             self.table.clearSelection()
             return
-        if self.table.item(i, j).text():
+        if self.table.item(i, j).text() not in ["NULL", "''", '""']:
             self.table.item(i, j).setBackground(QColor(255, 220, 0))
         else:
             self.table.item(i, j).setBackground(QColor(200, 200, 200))
@@ -225,7 +230,9 @@ class QLTableViewWindow(QMainWindow, QLWindow):
 class QLDatabaseViewWindow(QMainWindow, QLWindow):
     def __init__(self, database):
         super().__init__()
-        uic.loadUi("DatabaseViewWindow.ui", self)
+        uic.loadUi("ui/DatabaseViewWindow.ui", self)
+
+        self.setWindowTitle(PQLE.get_dbname())
         
         self.init_tables_list()
         self.commit_button.clicked.connect(self.ask_for_commits)
@@ -241,6 +248,7 @@ class QLDatabaseViewWindow(QMainWindow, QLWindow):
         
         self.tables_list.itemSelectionChanged.connect(self.check_button_state)
         self.tables_list.itemDoubleClicked.connect(lambda: self.edit_table(self.get_current_item_text()))
+        self.tables_list.setAttribute(QtCore.Qt.WA_MacShowFocusRect, False)
 
         self.check_button_state()
 
@@ -272,8 +280,7 @@ class QLDatabaseViewWindow(QMainWindow, QLWindow):
         QLA.open_window(QLTableViewWindow, table)
 
     def delete_table(self, table):
-        PQLE.delete_table(table)
-        self.init_tables_list()
+        QLA.open_window(QLDialog, f"delete table {table}", lambda: (PQLE.delete_table(table), self.init_tables_list()))
 
     def check_button_state(self):
         if len(self.tables_list.selectedItems()) == 0:
@@ -333,6 +340,8 @@ class QLDatabaseViewWindow(QMainWindow, QLWindow):
             columns = q[1].split(",")
         else:
             columns = []
+        if columns == ["*"]:
+            columns = []
         results = PQLE.execute(query)
         if results:
             QLA.open_window(QLResultsViewWindow, results, columns)
@@ -352,7 +361,7 @@ class QLAdmin:
 class QLCommitDialog(QDialog, QLWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi("CommitDialog.ui", self)
+        uic.loadUi("ui/CommitDialog.ui", self)
         self.fill_commits()
 
         self.commit_button.clicked.connect(self.commit)
@@ -380,12 +389,15 @@ class QLCommitDialog(QDialog, QLWindow):
 class QLLoginWindow(QMainWindow, QLWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi("LoginWindow.ui", self)
+        uic.loadUi("ui/LoginWindow.ui", self)
+
+        self.setStyleSheet("background-image: url('img/background.jpg')")
 
         self.opendb_button.clicked.connect(self.open_db)
         self.createdb_button.clicked.connect(self.create_db)
 
         self.show()
+        self.repaint()
 
     def init_db(self, dbname):
         global connection
@@ -409,10 +421,11 @@ class QLLoginWindow(QMainWindow, QLWindow):
 class QLInputDialog(QDialog, QLWindow):
     def __init__(self, obj, func):
         super().__init__()
-        uic.loadUi("InputDialog.ui", self)
+        uic.loadUi("ui/InputDialog.ui", self)
 
         self.function = func
         self.ok_button.clicked.connect(self.run_function)
+        self.setWindowTitle(obj[:-1])
         self.cancel_button.clicked.connect(self.close)
         self.label.setText(obj)
 
@@ -425,7 +438,7 @@ class QLInputDialog(QDialog, QLWindow):
 class QLDialog(QDialog, QLWindow):
     def __init__(self, action, func):
         super().__init__()
-        uic.loadUi("Dialog.ui", self)
+        uic.loadUi("ui/Dialog.ui", self)
 
         self.function = func
         self.label.setText(self.label.text().replace('"Action"', action))
@@ -442,7 +455,7 @@ class QLDialog(QDialog, QLWindow):
 class QLAddFieldWindow(QMainWindow, QLWindow):
     def __init__(self, table):
         super().__init__()
-        uic.loadUi("AddFieldWindow.ui", self)
+        uic.loadUi("ui/AddFieldWindow.ui", self)
         self.table = table
         self.current_type = ""
         self.setWindowTitle(f"Add field to {self.table}")
@@ -473,7 +486,7 @@ class QLAddFieldWindow(QMainWindow, QLWindow):
 class QLFieldViewWindow(QMainWindow, QLWindow):
     def __init__(self, table):
         super().__init__()
-        uic.loadUi("FieldViewWindow.ui", self)
+        uic.loadUi("ui/FieldViewWindow.ui", self)
         self.table_name = table
 
         self.setWindowTitle(f"Fields of {self.table_name}")
@@ -485,6 +498,7 @@ class QLFieldViewWindow(QMainWindow, QLWindow):
         self.rename_column_button.clicked.connect(self.rename_column)
 
         self.table.itemSelectionChanged.connect(self.check_button_state)
+        self.table.setAttribute(QtCore.Qt.WA_MacShowFocusRect, False)
         self.check_button_state()
 
         self.init_table()
@@ -515,7 +529,7 @@ class QLFieldViewWindow(QMainWindow, QLWindow):
         if len(self.table.selectedItems()) == 0:
             self.rename_column_button.setEnabled(False)
         else:
-            self.rename_column_button.setEnabled(True)
+            self.rename_column_button.setEnabled(False)
 
     def rename_column(self):
         current_column = self.table.item(self.table.currentRow(), 0).text()
@@ -528,7 +542,7 @@ class QLFieldViewWindow(QMainWindow, QLWindow):
 class QLFieldRenameWindow(QDialog, QLWindow):
     def __init__(self, table, column_name):
         super().__init__()
-        uic.loadUi("FieldRenameWindow.ui", self)
+        uic.loadUi("ui/FieldRenameWindow.ui", self)
 
         self.column_name = column_name
         self.table_name = table
@@ -550,7 +564,7 @@ class QLFieldRenameWindow(QDialog, QLWindow):
 class QLCreateFieldWindow(QMainWindow, QLWindow):
     def __init__(self, func):
         super().__init__()
-        uic.loadUi("CreateFieldWindow.ui", self)
+        uic.loadUi("ui/CreateFieldWindow.ui", self)
 
         self.setWindowTitle("Field creation")
         self.cancel_button.clicked.connect(self.close)
@@ -600,13 +614,15 @@ class QLCreateFieldWindow(QMainWindow, QLWindow):
 class QLTableCreateWindow(QMainWindow, QLWindow):
     def __init__(self, func):
         super().__init__()
-        uic.loadUi("TableCreateWindow.ui", self)
+        uic.loadUi("ui/TableCreateWindow.ui", self)
 
         self.cancel_button.clicked.connect(self.close)
         self.ok_button.clicked.connect(self.create)
         self.createf_button.clicked.connect(self.create_field)
         self.deletef_button.clicked.connect(self.delete_field)
         self.table.itemSelectionChanged.connect(self.check_button_state)
+        self.table.setAttribute(QtCore.Qt.WA_MacShowFocusRect, False)
+        self.setWindowTitle("Create table")
         self.function = func
 
         self.check_button_state()
@@ -656,10 +672,11 @@ class QLTableCreateWindow(QMainWindow, QLWindow):
 class QLRowInsertWindow(QMainWindow, QLWindow):
     def __init__(self, table_name):
         super().__init__()
-        uic.loadUi("RowInsertWindow.ui", self)
+        uic.loadUi("ui/RowInsertWindow.ui", self)
 
         self.setWindowTitle("Row insert")
         self.table_name = table_name
+        self.label.setText(self.label.text().replace("TableName", self.table_name))
 
         self.cancel_button.clicked.connect(self.close)
         self.ok_button.clicked.connect(self.insert)
@@ -673,6 +690,7 @@ class QLRowInsertWindow(QMainWindow, QLWindow):
         self.table.setHorizontalHeaderLabels(["Field name", "Field type", "Value"])
 
         self.column_names = PQLE.execute(f"PRAGMA table_info({self.table_name})")
+        self.table.setAttribute(QtCore.Qt.WA_MacShowFocusRect, False)
 
         self.header = self.table.horizontalHeader()
 
@@ -701,7 +719,7 @@ class QLRowInsertWindow(QMainWindow, QLWindow):
 class QLResultsViewWindow(QMainWindow, QLWindow):
     def __init__(self, res, cnames=[]):
         super().__init__()
-        uic.loadUi("SQLResultsViewWindow.ui", self)
+        uic.loadUi("ui/SQLResultsViewWindow.ui", self)
 
         self.setWindowTitle("Query results")
 
@@ -712,11 +730,12 @@ class QLResultsViewWindow(QMainWindow, QLWindow):
             self.column_names = range(1, len(self.results[0]) + 1)
 
         self.init_table()
+        self.table.setAttribute(QtCore.Qt.WA_MacShowFocusRect, False)
         self.show()
 
     def init_table(self):
         self.table.setColumnCount(len(self.column_names))
-        self.table.setHorizontalHeaderLabels(self.column_names)
+        self.table.setHorizontalHeaderLabels(list(map(str, self.column_names)))
         self.table.setRowCount(0)
 
         self.header = self.table.horizontalHeader()
@@ -733,7 +752,19 @@ class QLResultsViewWindow(QMainWindow, QLWindow):
                     self.table.setItem(i, j, QTableWidgetItem("NULL"))
                 else:
                     self.table.setItem(i, j, QTableWidgetItem(str(elem)))
+                self.table.item(i, j).setFlags(self.table.item(i, j).flags() ^ QtCore.Qt.ItemIsEditable)
+                
 
+class QLMessageBox(QDialog, QLWindow):
+    def __init__(self, text):
+        super().__init__()
+        uic.loadUi("ui/MessageBox.ui", self)
+        self.label.setText(str(text).capitalize())
+        self.ok_button.clicked.connect(self.close)
+
+        self.pix.setPixmap(QPixmap("/Users/eugene/QLAdmin/img/error.jpg"))
+
+        self.show()
 
 data_types = ['INT', 'INTEGER', 'TINYINT', 'SMALLINT', 'MEDIUMINT',
               'BIGINT', 'UNSIGNED BIG INT', 'INT2', 'INT8', 'CHARACTER(20)',
@@ -744,10 +775,19 @@ data_types = ['INT', 'INTEGER', 'TINYINT', 'SMALLINT', 'MEDIUMINT',
 
 
 def excepthook(type, value, tback):
+    QLA.open_window(QLMessageBox, value)
     sys.__excepthook__(type, value, tback)
 sys.excepthook = excepthook
 
 
 app = QApplication(sys.argv)
+app.setStyleSheet(open("style.qss").read())
+
+
+fid = QFontDatabase.addApplicationFont("/Users/eugene/QLAdmin/fonts/Lato-Regular.ttf") # Replace with your path
+fontstr = QFontDatabase.applicationFontFamilies(fid)[0]
+font = QFont(fontstr)
+app.setFont(font)
+
 QLA = QLAdmin()
 sys.exit(app.exec()) 

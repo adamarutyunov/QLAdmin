@@ -1,0 +1,71 @@
+QMainWindow {
+    background-color: white;
+    font-family: “ALato”
+}
+
+QDialog {
+    background-color: white;
+}
+
+QTableWidget {
+    outline: 0;
+    font-size: 16px;
+}
+
+QLabel {
+    font-size: 14px;
+}
+
+QLabel#welcome_message {
+    font-size: 30px;
+}
+
+QTableWidgetItem:focus {
+    outline: 0;
+    font-size: 10px;
+}
+
+QPushButton {
+    background-color: white;
+    color: #0084FF;
+    border: 2px solid #0084FF;
+    border-radius: 15px;
+    font-size: 15px;
+    min-height: 30px;
+}
+
+QPushButton:!enabled {
+    opacity: 0.5;
+    filter: alpha(opacity=50);
+    color: #80c1ff;
+    border-color: #80c1ff;
+}
+
+QPushButton#ok_button {
+    background-color: #0084FF;
+    color: white;
+}
+
+QPushButton#ok_button:!enabled {
+    background-color: #80c1ff;
+}
+
+QPushButton:pressed {
+    background-color: #0084FF;
+    color: white;
+}
+
+QPushButton#ok_button:pressed {
+    background-color: white;
+    color: #0084FF;
+    border-color: #0084FF;
+}
+
+QLayout {
+    margin: 20px;
+}
+
+
+QWidget#centralwidget {
+    margin: 20px;
+}
