@@ -83,7 +83,7 @@ class PyQL:
 
     def truncate_table(self, table):
         # Truncate table
-        execution = f"TRUNCATE TABLE {table}"
+        execution = f"DELETE FROM {table}"
         return self.execute(execution)
 
     def execute(self, execution):
