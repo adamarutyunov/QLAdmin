@@ -173,6 +173,7 @@ class QLLoginWindow(QMainWindow, QLWindow):
         uic.loadUi("ui/LoginWindow.ui", self)
 
         self.setStyleSheet("background-image: url('img/background.jpg')")
+        self.setWindowTitle("QLAdmin")
 
         self.opendb_button.clicked.connect(self.open_db)
         self.createdb_button.clicked.connect(self.create_db)
@@ -841,7 +842,7 @@ class QLMessageBox(QDialog, QLWindow):
         self.label.setText(str(text).capitalize())
         self.ok_button.clicked.connect(self.close)
 
-        self.pix.setPixmap(QPixmap("/Users/eugene/QLAdmin/img/error.jpg"))
+        self.pix.setPixmap(QPixmap("img/error.jpg"))
 
         self.show()
 
@@ -881,7 +882,7 @@ app = QApplication(sys.argv)
 app.setStyleSheet(open("style.qss").read())
 
 # Add custom font
-fid = QFontDatabase.addApplicationFont("/Users/eugene/QLAdmin/fonts/Lato-Regular.ttf")  # Replace with your path
+fid = QFontDatabase.addApplicationFont("fonts/Lato-Regular.ttf")  # Replace with your path
 fontstr = QFontDatabase.applicationFontFamilies(fid)[0]
 font = QFont(fontstr)
 app.setFont(font)
